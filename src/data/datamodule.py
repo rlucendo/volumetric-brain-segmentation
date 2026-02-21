@@ -1,7 +1,8 @@
 import os
 from typing import Optional
 import pytorch_lightning as pl
-from torch.utils.data import DataLoader
+# from torch.utils.data import DataLoader
+from monai.data import DataLoader
 from omegaconf import DictConfig
 
 from monai.apps import DecathlonDataset

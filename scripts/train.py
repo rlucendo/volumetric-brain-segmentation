@@ -63,7 +63,7 @@ def main(config_dir: str):
         devices=1,
         precision="16-mixed", # Crucial for 3D data: reduces VRAM usage by 50%
         log_every_n_steps=5,
-        deterministic=True,
+        deterministic=False,
     )
 
     # 7. Execute Training
