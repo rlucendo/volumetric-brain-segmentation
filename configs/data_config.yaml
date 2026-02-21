@@ -1,4 +1,4 @@
-task: "Task01_BrainTumor"
+task: "Task01_BrainTumour"
 data_dir: "./data"
 cache_num: 20              # Cuántos volúmenes guardar en RAM para acelerar epochs
 batch_size: 2              # Pequeño porque los tensores 3D son enormes
