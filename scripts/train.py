@@ -38,7 +38,8 @@ def main(config_dir: str):
     # 5. Setup Callbacks
     # Save the model with the highest validation Dice score
     checkpoint_callback = ModelCheckpoint(
-        dirpath="checkpoints/",
+        # Save directly to mounted Google Drive if running in Colab, else local
+        dirpath="/content/drive/MyDrive/Colab Notebooks/volumetric-brain-segmentation/checkpoints/" if os.path.exists("/content/drive") else "checkpoints/",
         filename="brats-{epoch:02d}-{val/dice_score:.4f}",
         monitor="val/dice_score",
         mode="max",
