@@ -1,0 +1,7 @@
+task: "Task01_BrainTumor"
+data_dir: "./data"
+cache_num: 20              # Cuántos volúmenes guardar en RAM para acelerar epochs
+batch_size: 2              # Pequeño porque los tensores 3D son enormes
+val_batch_size: 1          # Validación siempre en batch 1 para sliding window
+num_workers: 2             # Hilos de CPU para cargar datos
+patch_size: [96, 96, 96]   # Tamaño del cubo 3D recortado para entrenar

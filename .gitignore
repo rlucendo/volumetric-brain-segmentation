@@ -1,0 +1,21 @@
+# Python
+__pycache__/
+*.py[cod]
+*venv*/
+.env
+
+# PyTorch / Lightning
+*.ckpt
+*.pt
+*.pth
+lightning_logs/
+
+# Data
+data/
+!data/.gitkeep
+
+# W&B
+wandb/
+
+# OS
+.DS_Store

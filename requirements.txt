@@ -1,0 +1,9 @@
+torch>=2.0.0
+torchvision
+pytorch-lightning>=2.0.0
+monai>=1.3.0
+nibabel
+wandb
+omegaconf
+scikit-learn
+matplotlib
