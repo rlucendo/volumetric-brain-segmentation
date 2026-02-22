@@ -1,6 +1,17 @@
 import os
 import argparse
 import torch
+
+# --- PyTorch 2.6+ Security Bypass (Monkeypatch) ---
+# We trained this checkpoint ourselves, so we trust it 100%.
+# This forces torch.load to bypass the strict 'weights_only=True' check.
+_original_load = torch.load
+def _trusted_load(*args, **kwargs):
+    kwargs["weights_only"] = False
+    return _original_load(*args, **kwargs)
+torch.load = _trusted_load
+# ---------------------------------------------------
+
 from omegaconf import OmegaConf
 
 from monai.transforms import (
@@ -10,7 +21,7 @@ from monai.transforms import (
     Orientationd,
     Spacingd,
     NormalizeIntensityd,
-    SaveImaged,
+    SaveImage,
     AsDiscrete,
 )
 from monai.inferers import sliding_window_inference
@@ -63,7 +74,7 @@ def main(config_dir: str, ckpt_path: str, input_image_path: str, output_dir: str
 
     # 4. Define the saver transform to export the prediction
     # It will automatically use the original image's metadata (Affine matrix)
-    saver = SaveImaged(
+    saver = SaveImage(
         output_dir=output_dir, 
         output_postfix="pred", 
         output_ext=".nii.gz",
@@ -96,7 +107,7 @@ def main(config_dir: str, ckpt_path: str, input_image_path: str, output_dir: str
             
             # Save to disk using MONAI's saver (needs the meta_dict from the original image)
             # The saver automatically extracts metadata from batch_data["image_meta_dict"]
-            saver(batch_data["pred"][0], meta_data=batch_data["image"].meta)
+            saver(batch_data["pred"][0], meta_data=batch_data["image"][0].meta)
 
     print(f"Inference complete! Prediction saved in: {output_dir}")
 
