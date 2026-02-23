@@ -66,7 +66,6 @@ volumetric-brain-segmentation/
 
 ---
 
-
 ## 4. Methodology
 
 Training on massive 3D NIfTI files required a hardware-resilient strategy:
@@ -89,8 +88,19 @@ The evaluation suite (`NeuroSeg_3D_training_pipeline.ipynb`) moves beyond standa
 To ensure clinical trust, standard Grad-CAM was replaced with specific volumetric visualization tools:
 
 * **Normalized Voxel Confusion Matrix:** Ignores the massive empty background to focus purely on Tissue vs. Tumor voxel misclassifications.
+
+![Normalized Confusion Matrix](https://drive.google.com/uc?id=1TKDIjHckIukDlJX9vgwZ2m4934tMbZ1s)
+
+
+![MRI](https://drive.google.com/uc?id=1zkOwfX_gDZge9rOgW4T12aY2cziJ3c8S)
+
 * **Interactive 3D Meshes:** Employs Marching Cubes and Plotly to render the predicted tumor as an interactive 3D object for topological review.
+
+![Interactive 3D Mesh](https://drive.google.com/uc?id=1NCSmlliDQpQT7HvCRP61N7GYW6aP0gmi)
+
 * **Shannon Entropy Uncertainty Maps ("Ring of Fire"):** Highlights decision boundaries where the model hesitates. The model confidently predicts the core and the background, but flags the exact boundary (in milimeters) where the human surgeon should pay extra attention.
+
+![Shannon Entropy Uncertainty Map](https://drive.google.com/uc?id=1-Jv1PKoRNXhNQfK069UhV91yzDZ8J2o1)
 
 ---
 
