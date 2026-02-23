@@ -15,9 +15,9 @@ class BraTSSegmentationModule(pl.LightningModule):
         self.save_hyperparameters()
         self.cfg = cfg
 
-        # 1. Arquitectura de la Red: 3D U-Net estándar
+        # 1. Network Architecture: Standard 3D U-Net
         self.net = UNet(
-            spatial_dims=3, # Fundamental: 3D
+            spatial_dims=3, # Fundamental requirement for volumetric data
             in_channels=cfg.in_channels,
             out_channels=cfg.out_channels,
             channels=cfg.channels,
@@ -26,13 +26,13 @@ class BraTSSegmentationModule(pl.LightningModule):
             norm="batch",
         )
 
-        # 2. Función de pérdida híbrida
+        # 2. Hybrid Loss Function (Dice + Cross Entropy)
         self.loss_function = DiceCELoss(to_onehot_y=True, softmax=True)
 
-        # 3. Métrica Clínica
+        # 3. Clinical Evaluation Metric
         self.dice_metric = DiceMetric(include_background=False, reduction="mean")
         
-        # 4. Post-procesamiento para las métricas
+        # 4. Post-processing transforms for metric calculation
         self.post_pred = AsDiscrete(argmax=True, to_onehot=cfg.out_channels)
         self.post_label = AsDiscrete(to_onehot=cfg.out_channels)
 
@@ -45,19 +45,19 @@ class BraTSSegmentationModule(pl.LightningModule):
         
         loss = self.loss_function(outputs, labels)
         
-        # Logging de la pérdida
+        # Log training loss
         self.log("train/loss", loss, on_step=True, on_epoch=True, prog_bar=True, logger=True)
         return loss
 
     def validation_step(self, batch, batch_idx):
         """
-        En validación, recibimos el volumen completo. Usamos sliding_window_inference
-        para que la red extraiga parches, los prediga y ensamble el volumen final
-        sin colapsar la VRAM de la GPU.
+        Validation step receives the full anatomical volume. 
+        Implements sliding_window_inference to extract, predict, and reassemble 
+        patches seamlessly without exceeding GPU VRAM limits.
         """
         images, labels = batch["image"], batch["label"]
         
-        # Inferencia por ventana deslizante
+        # Execute sliding window inference
         roi_size = self.cfg.roi_size
         sw_batch_size = self.cfg.sw_batch_size
         outputs = sliding_window_inference(
@@ -69,32 +69,32 @@ class BraTSSegmentationModule(pl.LightningModule):
         
         loss = self.loss_function(outputs, labels)
         
-        # Post-procesamiento para calcular el Dice (One-hot encoding)
+        # Post-process tensors for Dice score calculation (One-hot encoding)
         outputs_list = [self.post_pred(i) for i in outputs]
         labels_list = [self.post_label(i) for i in labels]
         
-        # Actualizamos el estado de la métrica
+        # Update metric state
         self.dice_metric(y_pred=outputs_list, y=labels_list)
         
         self.log("val/loss", loss, on_step=False, on_epoch=True, prog_bar=True)
         return {"val_loss": loss}
 
     def on_validation_epoch_end(self):
-        # Calculamos el Dice medio de toda la época y reseteamos
+        # Compute mean Dice score for the epoch and reset metric state
         mean_dice = self.dice_metric.aggregate().item()
         self.dice_metric.reset()
         
         self.log("val/dice_score", mean_dice, prog_bar=True, logger=True)
 
     def configure_optimizers(self):
-        # AdamW es un estándar muy sólido hoy en día
+        # AdamW optimization algorithm
         optimizer = torch.optim.AdamW(
             self.net.parameters(), 
             lr=self.cfg.learning_rate, 
             weight_decay=self.cfg.weight_decay
         )
         
-        # Un scheduler para ir reduciendo el learning rate ayuda a converger mejor
+        # Cosine Annealing learning rate scheduler to aid stable convergence
         scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(
             optimizer, T_max=50, eta_min=1e-6
         )

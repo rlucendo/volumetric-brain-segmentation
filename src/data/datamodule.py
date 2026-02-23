@@ -20,8 +20,8 @@ from monai.transforms import (
 class BraTSDataModule(pl.LightningDataModule):
     def __init__(self, cfg: DictConfig):
         """
-        DataModule profesional para BraTS 3D.
-        Maneja descarga, transformaciones médicas y generación de dataloaders.
+        Professional LightningDataModule for 3D BraTS.
+        Handles data downloading, medical-grade transformations, and dataloader generation.
         """
         super().__init__()
         self.cfg = cfg
@@ -30,27 +30,27 @@ class BraTSDataModule(pl.LightningDataModule):
 
     def get_train_transforms(self):
         """
-        Transformaciones para entrenamiento.
-        Incluye remuestreo espacial, normalización y extracción de parches 3D.
+        Training data transformations.
+        Includes spatial resampling, intensity normalization, and 3D patch extraction.
         """
         return Compose([
             LoadImaged(keys=["image", "label"]),
             EnsureChannelFirstd(keys=["image", "label"]),
-            # Orientación estándar neurológica (RAS)
+            # Standardize to neurological orientation (RAS - Right, Anterior, Superior)
             Orientationd(keys=["image", "label"], axcodes="RAS"),
-            # Remuestreo a un espaciado isométrico uniforme (opcional pero recomendado)
+            # Resample to a uniform isometric voxel spacing
             Spacingd(keys=["image", "label"], pixdim=(1.0, 1.0, 1.0), mode=("bilinear", "nearest")),
-            # Normalización Z-score por canal (FLAIR, T1, etc.)
+            # Apply channel-wise Z-score normalization (e.g., across FLAIR, T1w, T1gd, T2w)
             NormalizeIntensityd(keys="image", nonzero=True, channel_wise=True),
-            # Data Augmentation: Recortes aleatorios
+            # Data Augmentation: Random spatial cropping
             RandSpatialCropSamplesd(
                 keys=["image", "label"],
                 roi_size=self.cfg.patch_size,
-                num_samples=2, # Genera 2 parches por cada volumen cargado
+                num_samples=2, # Extract 2 patches per loaded volume to optimize I/O
                 random_center=True,
                 random_size=False
             ),
-            # Data Augmentation: Volteo en ejes
+            # Data Augmentation: Random axis flipping for rotational invariance
             RandFlipd(keys=["image", "label"], prob=0.5, spatial_axis=0),
             RandFlipd(keys=["image", "label"], prob=0.5, spatial_axis=1),
             RandFlipd(keys=["image", "label"], prob=0.5, spatial_axis=2),
@@ -58,8 +58,8 @@ class BraTSDataModule(pl.LightningDataModule):
 
     def get_val_transforms(self):
         """
-        Transformaciones para validación.
-        Sin recortes aleatorios (evaluamos el volumen completo).
+        Validation data transformations.
+        Excludes random cropping to evaluate on the full anatomical volume.
         """
         return Compose([
             LoadImaged(keys=["image", "label"]),
@@ -71,11 +71,11 @@ class BraTSDataModule(pl.LightningDataModule):
 
     def setup(self, stage: Optional[str] = None):
         """
-        Descarga (si no existe) y prepara el dataset de MONAI.
-        Usa caché inteligente para no saturar el disco en cada epoch.
+        Downloads (if absent) and prepares the MONAI dataset.
+        Implements smart caching to prevent I/O bottlenecks during epochs.
         """
         if stage == "fit" or stage is None:
-            # Entrenamiento (80% de los datos)
+            # Training split (80% of the dataset)
             self.train_dataset = DecathlonDataset(
                 root_dir=self.cfg.data_dir,
                 task=self.cfg.task,
@@ -83,17 +83,17 @@ class BraTSDataModule(pl.LightningDataModule):
                 section="training",
                 download=True,
                 cache_num=self.cfg.cache_num,
-                val_frac=0.2, # Separa 20% para validación interna de forma determinista
+                val_frac=0.2, # Deterministically allocate 20% for internal validation
                 seed=42
             )
             
-            # Validación (20% de los datos)
+            # Validation split (20% of the dataset)
             self.val_dataset = DecathlonDataset(
                 root_dir=self.cfg.data_dir,
                 task=self.cfg.task,
                 transform=self.get_val_transforms(),
                 section="validation",
-                download=False, # Ya se descargó arriba
+                download=False, # Data already downloaded in the training block
                 cache_num=self.cfg.cache_num,
                 val_frac=0.2,
                 seed=42
@@ -105,7 +105,7 @@ class BraTSDataModule(pl.LightningDataModule):
             batch_size=self.cfg.batch_size, 
             num_workers=self.cfg.num_workers, 
             shuffle=True,
-            pin_memory=True # Acelera la transferencia CPU -> GPU
+            pin_memory=True # Accelerate CPU-to-GPU memory transfer
         )
 
     def val_dataloader(self):

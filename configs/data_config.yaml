@@ -1,7 +1,7 @@
 task: "Task01_BrainTumour"
 data_dir: "./data"
-cache_num: 10              # Cuántos volúmenes guardar en RAM para acelerar epochs
-batch_size: 4              # Pequeño porque los tensores 3D son enormes
-val_batch_size: 1          # Validación siempre en batch 1 para sliding window
-num_workers: 10             # Hilos de CPU para cargar datos
-patch_size: [96, 96, 96]   # Tamaño del cubo 3D recortado para entrenar
+cache_num: 10              # Number of volumes to cache in memory to accelerate training epochs
+batch_size: 4              # Kept small due to the high VRAM footprint of 3D tensors
+val_batch_size: 1          # Strictly set to 1 to support sliding window inference during validation
+num_workers: 10            # Number of CPU subprocesses allocated for data loading
+patch_size: [96, 96, 96]   # Dimensions of the 3D spatial crop used for training patches

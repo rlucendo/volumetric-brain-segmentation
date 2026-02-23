@@ -3,19 +3,16 @@ import argparse
 import torch
 import pytorch_lightning as pl
 
-# Enable Tensor Cores for NVIDIA A100 to maximize throughput
+# Configure TensorFloat-32 (TF32) matrix multiplication to maximize throughput on Ampere/Hopper architectures
 torch.set_float32_matmul_precision('medium')
 
-# --- PyTorch 2.6+ Security Bypass (Monkeypatch) ---
-# We trained this checkpoint ourselves, so we trust it 100%.
-# This forces torch.load to bypass the strict 'weights_only=True' check,
-# avoiding the whack-a-mole with nested OmegaConf internal classes.
+# PyTorch 2.6+ checkpoint security bypass
+# Overrides strict 'weights_only' unpickling constraints to allow loading of trusted local checkpoints containing complex internal configuration objects.
 _original_load = torch.load
 def _trusted_load(*args, **kwargs):
     kwargs["weights_only"] = False
     return _original_load(*args, **kwargs)
 torch.load = _trusted_load
-# ---------------------------------------------------
 
 from pytorch_lightning.callbacks import ModelCheckpoint, EarlyStopping
 from pytorch_lightning.loggers import WandbLogger
@@ -26,9 +23,9 @@ from src.models.seg_module import BraTSSegmentationModule
 
 def main(config_dir: str, ckpt_path: str = None):
     """
-    Main training orchestrator.
+    Core training orchestrator for 3D volumetric segmentation.
     """
-    # Load Configurations
+    # Load YAML configurations for data pipeline and model architecture
     data_cfg = OmegaConf.load(os.path.join(config_dir, "data_config.yaml"))
     model_cfg = OmegaConf.load(os.path.join(config_dir, "model_config.yaml"))
 
@@ -37,7 +34,7 @@ def main(config_dir: str, ckpt_path: str = None):
     datamodule = BraTSDataModule(cfg=data_cfg)
     model = BraTSSegmentationModule(cfg=model_cfg)
 
-    # Note: We use the same W&B project/name to group the resumed runs
+    # Maintain consistent W&B project namespace to ensure logging continuity across preempted and resumed training sessions
     wandb_logger = WandbLogger(
         project="brats-3d-segmentation",
         name="unet-baseline",
@@ -51,7 +48,7 @@ def main(config_dir: str, ckpt_path: str = None):
         monitor="val/dice_score",
         mode="max",
         save_top_k=3,
-        save_last=True, # This is crucial: it always saves a 'last.ckpt' file
+        save_last=True, # Crucial for fault tolerance: persistently saves the latest epoch state as 'last.ckpt'
     )
 
     early_stopping_callback = EarlyStopping(
@@ -74,7 +71,7 @@ def main(config_dir: str, ckpt_path: str = None):
 
     print(f"Starting training pipeline... Resuming from: {ckpt_path if ckpt_path else 'Scratch'}")
     
-    # Pass the ckpt_path to the fit method. If it's None, it starts from scratch.
+    # Execute training loop, injecting checkpoint path to resume state if provided
     trainer.fit(model=model, datamodule=datamodule, ckpt_path=ckpt_path)
 
 if __name__ == "__main__":
@@ -83,14 +80,13 @@ if __name__ == "__main__":
         "--config_dir", 
         type=str, 
         default="configs", 
-        help="Directory containing YAML configuration files"
+        help="Path to directory containing YAML configuration files"
     )
-    # New argument to handle checkpoint resuming
     parser.add_argument(
         "--ckpt_path", 
         type=str, 
         default=None, 
-        help="Path to the .ckpt file to resume training from"
+        help="Optional path to a .ckpt file to resume training state"
     )
     args = parser.parse_args()
     
