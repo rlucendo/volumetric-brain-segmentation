@@ -1,20 +1,43 @@
 # NeuroSeg-3D: Volumetric 3D Brain Tumor Segmentation (BraTS)
 
+![Python](https://img.shields.io/badge/Python-3.10%2B-blue)
+![PyTorch](https://img.shields.io/badge/PyTorch-2.0%2B-orange)
+![MONAI](https://img.shields.io/badge/MONAI-Medical_AI-darkgreen)
+![Weights & Biases](https://img.shields.io/badge/MLOps-W&B-yellow)
+[![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](PON_AQUI_TU_ENLACE_AL_COLAB)
+
+## 1. Project summary
+
 This repository contains an end-to-end MLOps pipeline for 3D brain tumor segmentation using the Medical Segmentation Decathlon dataset (Task01_BrainTumour). 
 
 Designed as a technical showcase, this project address the complex hardware and infrastructural challenges of volumetric medical imaging (NIfTI), multi-modal MRI sequences, and clinical-grade evaluation.
 
-## Key Features & Architectural Decisions
+---
 
-* **3D U-Net Architecture:** Implemented from scratch to learn spatial contexts across all three anatomical planes (Axial, Coronal, Sagittal) simultaneously.
-* **MONAI Medical Framework:** Utilized for real-time volumetric ETL, caching, and medical-specific transformations (spacing, orientation, normalization).
-* **PyTorch Lightning Orchestration:** Decoupled training logic from infrastructure. Features built-in Mixed Precision (`16-mixed`), deterministic seeding, and automatic checkpointing.
-* **Weights & Biases Integration:** Cloud-based experiment tracking, real-time loss/Dice metric visualization, and automated model artifact versioning.
-* **Hardware-Resilient Design:** Configured to survive Google Colab's strict `/dev/shm` memory limits and preemptions by implementing robust "Resume from Checkpoint" capabilities.
-* **Clinical-Grade XAI & Evaluation:** Moved beyond Grad-CAM to implement 3D Marching Cubes rendering, Shannon Entropy Uncertainty Maps, and Normalized Voxel Confusion Matrices.
+## 2. Dataset
 
-## Repository Structure
+The model is trained on the **Medical Segmentation Decathlon (Task01_BrainTumour)**, utilizing multi-modal MRI sequences (FLAIR, T1w, T1gd, T2w) to capture different biological properties of the tumor. 
 
+The original dataset annotations include:
+
+| Class | Description | Clinical Relevance |
+| :--- | :--- | :--- |
+| **Label 0** | Background / Healthy Tissue | Baseline reference. |
+| **Label 1** | Necrotic & Non-enhancing core (NCR/NET) | Dead tissue within the tumor mass. |
+| **Label 2** | Peritumoral Edema (ED) | Swelling surrounding the tumor (visible in FLAIR). |
+| **Label 3** | GD-enhancing tumor (ET) | Active tumor growth with disrupted blood-brain barrier. |
+
+![BraTS Dataset Sample](https://drive.google.com/file/d/1x4aAVdZFGW3CYoOd03n3n8rfdDNgR6zb/view?usp=sharing)
+
+*Note: For this initial MVP pipeline, the model is evaluated on its ability to segment the **Whole Tumor (WT)**, merging the sub-regions to establish a robust baseline.*
+
+---
+
+## 3. Architecture
+
+Volumetric processing requires strict memory management and robust infrastructure. The codebase is fully decoupled (Data, Model, Orchestration) following modern MLOps principles.
+
+### Directory Structure
 ```text
 volumetric-brain-segmentation/
 ├── configs/
@@ -22,7 +45,7 @@ volumetric-brain-segmentation/
 │   └── model_config.yaml     # Architecture dimensions and Loss/Optimizer settings
 ├── data/                     # Local data directory (ignored in git)
 ├── notebooks/
-│   └── 00_end_to_end_demo.ipynb # Showcase notebook with EDA, Inference & XAI
+│   └── 00_end_to_end_demo.ipynb # The lab: EDA, Visualization & XAI showcase
 ├── scripts/
 │   ├── train.py              # Main training orchestrator (supports resuming)
 │   └── infer.py              # Single-volume NIfTI inference script
@@ -34,38 +57,78 @@ volumetric-brain-segmentation/
 └── requirements.txt
 ```
 
-## Installation & Setup
+### Tech stack
+* **Core:** Python, PyTorch, PyTorch Lightning.
+* **Medical Framework:** **MONAI** for real-time volumetric ETL and medical-specific spatial transforms (Spacing, Orientation, Normalization).
+* **Experiment Tracking:** **Weights & Biases (W&B)** for real-time loss/Dice metric visualization and automated model artifact versioning.
+* **Model:** 3D U-Net. Configured for Mixed Precision (`16-mixed`) to reduce VRAM footprint by 50% without sacrificing clinical accuracy.
 
-Clone the repository and install the strict medical dependencies:
+---
 
-```bash
-git clone https://github.com/rlucendo/volumetric-brain-segmentation.git
-cd volumetric-brain-segmentation
-pip install -r requirements.txt
-```
 
-*Note: For optimal performance, an NVIDIA GPU with at least 15GB VRAM (e.g., T4, L4, or A100) is highly recommended.*
+## 4. Methodology
 
-## Training the Model
+Training on massive 3D NIfTI files required a hardware-resilient strategy:
 
-The training pipeline downloads the dataset automatically (if not present) and synchronizes with Weights & Biases. 
+1.  **Data Ingestion & ETL:** Utilized MONAI's deterministic transforms to ensure the data is loaded, correctly oriented to standard neurological views, and intensity-normalized (Z-score).
+2.  **Hardware Optimization:** Bypassed Google Colab's strict `/dev/shm` memory limits by customizing the dataloader workers, ensuring stable convergence on A100 GPUs.
+3.  **Fault Tolerance:** Implemented a robust "Resume from Checkpoint" logic. If the cloud instance is preempted, the script securely monkeypatches PyTorch 2.6+ `weights_only` strictness to safely resume training from local or W&B downloaded artifacts.
 
-To start training from scratch:
+---
+
+## 5. Performance & Clinical Evaluation
+
+The evaluation suite (`NeuroSeg_3D_training_pipeline.ipynb`) moves beyond standard 2D metrics to provide radiological-grade feedback.
+
+### Quantitative Metrics
+* **Dice Score:** Measures the volumetric overlap between the ground truth and prediction.
+* **Hausdorff Distance 95 (HD95):** Measures the absolute maximum boundary error in physical millimeters, a crucial metric for surgical margin planning.
+
+### Clinical Explainability (XAI)
+To ensure clinical trust, standard Grad-CAM was replaced with specific volumetric visualization tools:
+
+* **Normalized Voxel Confusion Matrix:** Ignores the massive empty background to focus purely on Tissue vs. Tumor voxel misclassifications.
+* **Interactive 3D Meshes:** Employs Marching Cubes and Plotly to render the predicted tumor as an interactive 3D object for topological review.
+* **Shannon Entropy Uncertainty Maps ("Ring of Fire"):** Highlights decision boundaries where the model hesitates. The model confidently predicts the core and the background, but flags the exact boundary (in milimeters) where the human surgeon should pay extra attention.
+
+---
+
+## 6. How to use & replicate
+
+### Prerequisites
+* Git & Python 3.10+
+* An NVIDIA GPU with at least 15GB VRAM (e.g., T4, L4, or A100) is highly recommended.
+
+### Setup
+1.  **Clone the repository:**
+    ```bash
+    git clone https://github.com/rlucendo/volumetric-brain-segmentation.git
+    cd volumetric-brain-segmentation
+    ```
+
+2.  **Install dependencies:**
+    ```bash
+    pip install -r requirements.txt
+    ```
+
+### Scenario A: Train from scratch
+The training pipeline downloads the dataset automatically (if not present) and synchronizes with Weights & Biases.
+
 ```bash
 export PYTHONPATH=. 
 python scripts/train.py --config_dir configs
 ```
 
-**Resuming from a preempted session:**
-To bypass PyTorch 2.6+ strict `weights_only` security checks on local trusted configurations, the script safely monkeypatches the loader.
+### Scenario B: Resuming from a Preempted Session
+Safely resumes from the last saved `.ckpt` file, retaining optimizer states and epoch progress.
+
 ```bash
 export PYTHONPATH=. 
 python scripts/train.py --config_dir configs --ckpt_path checkpoints/last.ckpt
 ```
 
-## Inference & Prediction
-
-The `infer.py` script applies sliding window inference to process massive 3D volumes efficiently, outputting a clinically compliant `.nii.gz` file that preserves the original affine matrix.
+### Scenario C: Production Inference
+Applies sliding window inference to process a massive 3D volume, outputting a clinically compliant `.nii.gz` file that preserves the original affine matrix.
 
 ```bash
 export PYTHONPATH=. 
@@ -76,16 +139,21 @@ python scripts/infer.py \
     --output_dir predictions/
 ```
 
-## Evaluation & Clinical Visualizations
+---
 
-The `notebooks/NeuroSeg-3D_training_pipeline.ipynb` provides a comprehensive visual suite designed for radiological review:
-1. **Multi-planar Reconstructions:** Transparent overlays on Axial, Coronal, and Sagittal slices.
-2. **Interactive 3D Meshes:** Rendered using Plotly and Marching Cubes.
-3. **Shannon Entropy (Uncertainty Maps):** Highlights decision boundaries where the model hesitates, crucial for clinical trust.
-4. **Hausdorff Distance (HD95):** Measures the absolute boundary error in physical millimeters.
+## 7. Future roadmap
 
-## Future Improvements
-Given more compute budget and time, the following enhancements would be implemented:
-* **Test-Time Augmentation (TTA):** Averaging predictions across flipped axes for smoother edges.
-* **Region-Specific Sub-classing:** Segmenting Edema, Enhancing Tumor, and Necrotic Core individually rather than treating it as a "Whole Tumor" binary problem.
-* **Distributed Data Parallel (DDP):** Scaling the pipeline across multiple A100 nodes.
+Given more compute budget and time, the following enhancements would scale this MVP to production readiness:
+
+* [ ] **Test-Time Augmentation (TTA):** Averaging predictions across flipped axes for smoother edges and lower HD95.
+* [ ] **Region-Specific Sub-classing:** Upgrading the loss function to segment Edema, Enhancing Tumor, and Necrotic Core individually rather than treating it as a binary problem.
+* [ ] **Distributed Data Parallel (DDP):** Scaling the pipeline across multiple A100 nodes for faster convergence.
+
+---
+
+## Author
+
+**Rubén Lucendo**  
+*AI Engineer & Product Builder*
+
+Building systems that bridge the gap between theory and business value.
