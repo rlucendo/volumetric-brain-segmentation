@@ -8,7 +8,7 @@
 
 ## 1. Project summary
 
-This repository (NeuroSeg-3D) contains an end-to-end MLOps pipeline for 3D brain tumor segmentation using the Medical Segmentation Decathlon dataset (Task01_BrainTumour). 
+This repository (NeuroSeg-3D) contains a fully decoupled training and evaluation pipeline for 3D brain tumor segmentation using the Medical Segmentation Decathlon dataset (Task01_BrainTumour). 
 
 Designed as a technical showcase, this project address the complex hardware and infrastructural challenges of volumetric medical imaging (NIfTI), multi-modal MRI sequences, and clinical-grade evaluation.
 
