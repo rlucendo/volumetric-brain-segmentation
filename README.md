@@ -27,7 +27,8 @@ The original dataset annotations include:
 | **Label 2** | Peritumoral Edema (ED) | Swelling surrounding the tumor (visible in FLAIR). |
 | **Label 3** | GD-enhancing tumor (ET) | Active tumor growth with disrupted blood-brain barrier. |
 
-![BraTS Dataset Sample](https://drive.google.com/file/d/1x4aAVdZFGW3CYoOd03n3n8rfdDNgR6zb/view?usp=sharing)
+![BraTS Dataset Sample](https://drive.google.com/uc?id=1x4aAVdZFGW3CYoOd03n3n8rfdDNgR6zb)
+
 
 *Note: For this initial MVP pipeline, the model is evaluated on its ability to segment the **Whole Tumor (WT)**, merging the sub-regions to establish a robust baseline.*
 
