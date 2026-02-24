@@ -21,7 +21,7 @@ def main(config_dir: str):
     print(f"Executing ETL pipeline for task: {data_cfg.task}...")
     datamodule.setup(stage="fit")
     
-    print("✓ ETL Phase complete. Dataset is structured and cached.")
+    print("ETL Phase complete. Dataset is structured and cached.")
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Run ETL Pipeline")

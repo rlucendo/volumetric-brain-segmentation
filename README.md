@@ -4,7 +4,7 @@
 ![PyTorch](https://img.shields.io/badge/PyTorch-2.0%2B-orange)
 ![MONAI](https://img.shields.io/badge/MONAI-Medical_AI-darkgreen)
 ![Weights & Biases](https://img.shields.io/badge/MLOps-W&B-yellow)
-[![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](WIP)
+[![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/drive/1ZYWTvOEbH6w7BTCOxOrbQR9J8AuHdLfW?usp=sharing)
 
 ## 1. Project summary
 
