@@ -74,6 +74,10 @@ class BraTSDataModule(pl.LightningDataModule):
         Downloads (if absent) and prepares the MONAI dataset.
         Implements smart caching to prevent I/O bottlenecks during epochs.
         """
+        # Self-healing infrastructure: Ensure the target directory exists 
+        # before MONAI attempts to access or download files into it.
+        os.makedirs(self.cfg.data_dir, exist_ok=True)
+        
         if stage == "fit" or stage is None:
             # Training split (80% of the dataset)
             self.train_dataset = DecathlonDataset(
